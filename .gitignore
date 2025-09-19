@@ -39,3 +39,20 @@
 
 # debug information files
 *.dwo
+
+# Build directories
+build/
+build-*/
+
+# Output files
+*.vtk
+*.visit
+*.msh
+*.vtu
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

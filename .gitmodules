@@ -1,0 +1,3 @@
+[submodule "mfem"]
+	path = mfem
+	url = https://github.com/mfem/mfem.git
