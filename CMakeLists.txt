@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(MoFE LANGUAGES CXX)
+project(MoFE LANGUAGES CXX CUDA)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -16,6 +16,7 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithD
 # User-configurable options for MPI and AMGX - exposed to ccmake GUI
 option(MOFE_USE_MPI "Enable MPI parallel build in MFEM" OFF)
 option(MOFE_USE_AMGX "Enable AMGX linear solver support in MFEM" OFF)
+set(MOFE_CUDA_ARCH "80" CACHE STRING "CUDA arch for MFEM")
 
 # Force CUDA to always be ON in MFEM when CUDA toolkit is available
 # This satisfies the requirement while being practical for environments without CUDA
@@ -31,6 +32,8 @@ endif()
 # Pass user-configurable options to MFEM
 set(MFEM_USE_MPI ${MOFE_USE_MPI} CACHE BOOL "Enable MPI parallel build" FORCE)
 set(MFEM_USE_AMGX ${MOFE_USE_AMGX} CACHE BOOL "Enable AMGX usage" FORCE)
+# set(MFEM_USE_CEED ON CACHE BOOL "Enable CEED" FORCE)
+set(CMAKE_CUDA_ARCHITECTURES ${MOFE_CUDA_ARCH} CACHE STRING "" FORCE)
 
 # Add MFEM subdirectory
 add_subdirectory(mfem)
@@ -60,7 +63,9 @@ target_link_libraries(mofe mfem)
 
 # Add example executable
 add_executable(cfd_example examples/cfd_example.cpp)
+add_executable(square_domain examples/square_domain.cpp)
 target_link_libraries(cfd_example mofe mfem)
+target_link_libraries(square_domain mofe mfem)
 
 # Copy data directory to build directory during build process
 # This ensures data files are available to executables in the build directory

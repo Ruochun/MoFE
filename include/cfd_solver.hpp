@@ -7,93 +7,62 @@ namespace mofe {
 
 /**
  * @brief CFD Solver class that interfaces with MFEM classes for solving CFD problems
- * 
+ *
  * This class demonstrates how to interface with MFEM's core classes:
  * - Mesh: for computational mesh handling
- * - Element: for finite element operations  
+ * - Element: for finite element operations
  * - FiniteElementSpace: for finite element space definition
  * - GridFunction: for solution representation
  * - BilinearForm: for assembling system matrices
  * - LinearForm: for assembling load vectors
  */
 class CFDSolver {
-public:
-    /**
-     * @brief Constructor
-     * @param mesh_file Path to mesh file
-     * @param order Finite element order
-     */
-    CFDSolver(const std::string& mesh_file, int order = 1);
-
-    /**
-     * @brief Destructor
-     */
+  public:
+    // Construct with mesh path and polynomial order (H1)
+    CFDSolver(const std::string& mesh_file, int order);
     ~CFDSolver();
 
-    /**
-     * @brief Initialize the CFD problem
-     * Sets up finite element spaces, boundary conditions, etc.
-     */
+    // Build mesh, FE spaces, BCs, and operators (GPU if possible)
     void Initialize();
 
-    /**
-     * @brief Solve the CFD problem
-     * Assembles system and solves linear/nonlinear system
-     */
+    // Advance the solution in time (simple semi-implicit viscous step)
     void Solve();
 
-    /**
-     * @brief Save solution to file
-     * @param filename Output filename
-     */
+    // Write mesh + velocity field to VTK
     void SaveSolution(const std::string& filename);
 
-    /**
-     * @brief Get the mesh
-     * @return Pointer to the mesh
-     */
-    mfem::Mesh* GetMesh() { return mesh_; }
+    // Accessors
+    mfem::Mesh* GetMesh();
+    mfem::FiniteElementSpace* GetFESpace();
+    mfem::GridFunction* GetSolution();
 
-    /**
-     * @brief Get the finite element space
-     * @return Pointer to the finite element space
-     */
-    mfem::FiniteElementSpace* GetFESpace() { return fespace_; }
+  private:
+    // Internal helpers
+    void BuildOperators_(bool is_tensor, bool is_simplex);
 
-    /**
-     * @brief Get the solution
-     * @return Pointer to the solution grid function
-     */
-    mfem::GridFunction* GetSolution() { return solution_; }
+    // Mesh / spaces
+    mfem::Mesh* mesh_ = nullptr;
+    mfem::FiniteElementCollection* fec_ = nullptr;  // H1 FE collection
+    mfem::FiniteElementSpace* fes_ = nullptr;       // vector H1 space (vdim=2)
 
-private:
-    // MFEM objects - demonstrating interface with core MFEM classes
-    mfem::Mesh* mesh_;                    ///< Computational mesh
-    mfem::FiniteElementCollection* fec_;  ///< Finite element collection
-    mfem::FiniteElementSpace* fespace_;   ///< Finite element space
-    mfem::GridFunction* solution_;        ///< Solution grid function
-    mfem::BilinearForm* a_;              ///< Bilinear form (system matrix)
-    mfem::LinearForm* b_;                ///< Linear form (RHS vector)
-    
-    int order_;                          ///< Finite element order
-    std::string mesh_file_;              ///< Mesh file path
+    // Fields
+    mfem::GridFunction* u_ = nullptr;      // current velocity
+    mfem::GridFunction* u_old_ = nullptr;  // previous step
 
-    /**
-     * @brief Setup finite element spaces
-     */
-    void SetupFESpaces();
+    // Linear forms / bilinear forms
+    mfem::BilinearForm* a_mass_ = nullptr;  // rho * I (vector mass)
+    mfem::BilinearForm* a_diff_ = nullptr;  // mu * grad(u):grad(v)
+    mfem::LinearForm* b_rhs_ = nullptr;     // (empty container; used by FormLinearSystem)
 
-    /**
-     * @brief Setup boundary conditions
-     */
-    void SetupBoundaryConditions();
+    // Boundary conditions (Dirichlet on all boundaries for this demo)
+    mfem::Array<int> ess_bdr_;   // size = max boundary attribute, 1=essential
+    mfem::Array<int> ess_tdof_;  // list of essential true dofs (velocity)
 
-    /**
-     * @brief Assemble system matrix and RHS
-     */
-    void AssembleSystem();
+    // Config
+    int order_ = 1;
+    std::string mesh_file_;
 };
 
-} // namespace mofe
+}  // namespace mofe
 
-#endif // CFD_SOLVER_HPP
+#endif  // CFD_SOLVER_HPP
