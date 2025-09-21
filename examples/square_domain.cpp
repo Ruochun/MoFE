@@ -5,14 +5,21 @@
 using namespace mfem;
 using namespace std;
 
+struct ScopedTimer {
+  mfem::StopWatch sw;
+  const char* name;
+  ScopedTimer(const char* n) : name(n) { sw.Clear(); sw.Start(); }
+  ~ScopedTimer() { sw.Stop(); std::cout << name << " = " << sw.RealTime() << " s\n"; }
+};
+
 int main(int, char**) {
-    // GPU backend (basic CUDA)
-    Device device("cuda");
+    bool use_cuda = true; // toggle for A/B
+    mfem::Device device(use_cuda ? "cuda" : "cpu");
     device.Print();
 
     // Params
     int order = 3;       // spline/NURBS order
-    int nx = 8, ny = 8;  // knot spans
+    int nx = 800, ny = 800;  // knot spans
 
     // NURBS (IGA) mesh on [0,1]^2
     // last 'true' => create as NURBS
@@ -49,7 +56,10 @@ int main(int, char**) {
     BilinearForm a(&fes);
     a.SetAssemblyLevel(AssemblyLevel::PARTIAL);
     a.AddDomainIntegrator(new DiffusionIntegrator());
-    a.Assemble();
+    {
+        ScopedTimer t("Assemble");
+        a.Assemble();
+    }
 
     // Form linear system (matrix-free Operator in A)
     OperatorPtr A;
@@ -59,14 +69,17 @@ int main(int, char**) {
     // ---- FIX: build Jacobi smoother from the BilinearForm (not from *A) ----
     CGSolver cg;
     cg.SetOperator(*A);
-    cg.SetRelTol(1e-12);
+    cg.SetRelTol(1e-8);
     cg.SetMaxIter(500);
     cg.SetPrintLevel(1);
 
     OperatorJacobiSmoother M(a, ess_tdof /*, damping=1.0*/);
     cg.SetPreconditioner(M);
 
-    cg.Mult(B, X);
+    {
+        ScopedTimer t("Solve");
+        cg.Mult(B, X);
+    }
     a.RecoverFEMSolution(X, b, x);
 
     // Error vs exact solution u = sin(pi x) sin(pi y)

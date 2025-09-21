@@ -64,8 +64,11 @@ target_link_libraries(mofe mfem)
 # Add example executable
 add_executable(cfd_example examples/cfd_example.cpp)
 add_executable(square_domain examples/square_domain.cpp)
+add_executable(NS examples/NS.cpp)
+
 target_link_libraries(cfd_example mofe mfem)
 target_link_libraries(square_domain mofe mfem)
+target_link_libraries(NS mofe mfem)
 
 # Copy data directory to build directory during build process
 # This ensures data files are available to executables in the build directory
